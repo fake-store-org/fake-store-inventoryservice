@@ -16,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http.
@@ -25,6 +26,8 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/actuator/health").permitAll()
+            .requestMatchers("/actuator/**").hasRole("ADMIN")
+            .requestMatchers("/api/inventory/check-stock").permitAll()
             .requestMatchers("/api/reservations/**").permitAll()
             .anyRequest().authenticated())
         .oauth2ResourceServer(oauth -> oauth

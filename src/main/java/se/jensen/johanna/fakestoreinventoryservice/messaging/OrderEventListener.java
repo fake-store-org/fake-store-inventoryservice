@@ -19,12 +19,12 @@ public class OrderEventListener {
   @SqsListener("${app.queues.confirm-reservation}")
   public void handleOrderConfirmation(ConfirmReservationEventDTO event) {
     log.info("Received order confirmation {}", event);
-    if (!reservationRepository.existsByReservationId(event.reservationId())) {
-      log.warn("Reservation {} not found. Skipping reservation confirmation",
-          event.reservationId());
+    if (!reservationRepository.existsByOrderId(event.orderId())) {
+      log.warn("Reservation for order {} not found. Abort confirmation",
+          event.orderId());
       return;
     }
-    reservationService.confirmReservation(event.reservationId());
+    reservationService.confirmReservation(event.orderId());
   }
 
 }

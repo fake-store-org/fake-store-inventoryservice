@@ -31,6 +31,8 @@ public class Reservation {
   @GeneratedValue
   private UUID reservationId;
 
+  private UUID orderId;
+
   @OneToMany(cascade = CascadeType.ALL)
   @JoinColumn(name = "reservation_id")
   private List<ReservationItem> reservedItems;
@@ -49,8 +51,9 @@ public class Reservation {
     this.reservedAt = Instant.now();
   }
 
-  public static Reservation reserve(List<ReservationItem> reservedItems) {
+  public static Reservation reserve(List<ReservationItem> reservedItems, UUID orderId) {
     return Reservation.builder()
+        .orderId(orderId)
         .reservedItems(reservedItems)
         .reservedAt(Instant.now())
         .expiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))

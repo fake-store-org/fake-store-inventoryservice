@@ -2,31 +2,28 @@ package se.jensen.johanna.fakestoreinventoryservice.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import se.jensen.johanna.fakestoreinventoryservice.dto.ReservationRequest;
+import se.jensen.johanna.fakestoreinventoryservice.dto.AvailabilityRequest;
+import se.jensen.johanna.fakestoreinventoryservice.dto.AvailabilityResponse;
 import se.jensen.johanna.fakestoreinventoryservice.service.ReservationService;
+
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/reservations")
-public class ReservationController {
+@RequestMapping("/api/inventory")
+public class InventoryController {
 
   private final ReservationService reservationService;
 
-  /**
-   * Internal endpoint for order to reserve cart for order
-   */
-  @PostMapping("/reserve-cart")
-  public ResponseEntity<Void> reserveCart(
-      @RequestBody @Valid ReservationRequest request) {
-    reservationService.reserveCart(request);
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .build();
+  @PostMapping("/check-stock")
+  public ResponseEntity<AvailabilityResponse> checkAvailability(
+      @RequestBody @Valid AvailabilityRequest request) {
+    return ResponseEntity.ok()
+        .body(reservationService.getCartAvailability(request.cartItemRequests()));
   }
 
 }

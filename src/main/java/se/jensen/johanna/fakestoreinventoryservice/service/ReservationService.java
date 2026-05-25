@@ -10,13 +10,11 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.jensen.johanna.fakestoreinventoryservice.dto.AvailabilityResponse;
 import se.jensen.johanna.fakestoreinventoryservice.dto.CartItemRequest;
 import se.jensen.johanna.fakestoreinventoryservice.dto.ReservationRequest;
-import se.jensen.johanna.fakestoreinventoryservice.dto.ReservationResponse;
 import se.jensen.johanna.fakestoreinventoryservice.exception.LimitedStockException;
 import se.jensen.johanna.fakestoreinventoryservice.model.Inventory;
 import se.jensen.johanna.fakestoreinventoryservice.model.Reservation;
@@ -33,12 +31,12 @@ public class ReservationService {
   private final ReservationRepository reservationRepository;
 
   @Transactional
-  public ReservationResponse reserveCart(Jwt jwt, ReservationRequest request) {
-    log.info("Reserving cart {} for user: {}", request, jwt.getSubject());
+  public void reserveCart(ReservationRequest request) {
+    log.info("Reserving cart {} for order {}...", request.cartItemRequests(), request.orderId());
     AvailabilityResponse response = getCartAvailability(request.cartItemRequests());
     if (!response.allAvailable()) {
-      log.warn("Unable to reserve cart for user: {}. Not all items are available. Updated cart: {}",
-          jwt.getSubject(), response.updatedCart());
+      log.warn("Unable to reserve cart at checkout. Not all items are available. Updated cart: {}",
+          response.updatedCart());
       throw new LimitedStockException("All items are not available.");
     }
 
@@ -54,13 +52,12 @@ public class ReservationService {
 
     inventory.forEach(i -> i.reserveStock(toUpdate.get(i.getProductId())));
 
-    Reservation reservation = Reservation.reserve(reservationItems);
+    Reservation reservation = Reservation.reserve(reservationItems, request.orderId());
     // cascade all children
     reservationRepository.save(reservation);
     inventoryRepository.saveAll(inventory);
-    log.info("Successfully reserved cart for  user {}. reservation id: {}", jwt.getSubject(),
-        reservation.getReservationId());
-    return new ReservationResponse(reservation.getReservationId());
+    log.info("Successfully reserved cart for order {}. reservation id: {}",
+        request.orderId(), reservation.getReservationId());
   }
 
   public AvailabilityResponse getCartAvailability(Set<CartItemRequest> cartItemRequests) {
@@ -93,11 +90,12 @@ public class ReservationService {
    * is deleted so it's not caught by scheduler.
    */
   @Transactional
-  public void confirmReservation(UUID reservationId) {
-    log.info("Committing reservation {}", reservationId);
-    Reservation reservation = reservationRepository.findByReservationId(reservationId)
+  public void confirmReservation(UUID orderId) {
+    log.info("Committing reservation for order{}", orderId);
+    Reservation reservation = reservationRepository.findByOrderId(orderId)
         .orElseThrow(() -> {
-          log.error("Reservation Id {} not found when trying to commit reservation", reservationId);
+          log.error("Reservation for order {} not found when trying to commit reservation event",
+              orderId);
           return new IllegalStateException("Reservation not found");
         });
 
@@ -110,8 +108,7 @@ public class ReservationService {
     inventory.forEach(i -> i.commitReservation(toUpdate.get(i.getProductId())));
     reservationRepository.delete(reservation);
     inventoryRepository.saveAll(inventory);
-    log.info("Reservation {} committed.", reservationId);
-
+    log.info("Reservation {} committed.", orderId);
   }
 
   private List<Inventory> fetchInventory(List<ReservationItem> items) {

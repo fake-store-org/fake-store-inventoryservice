@@ -33,3 +33,9 @@ build/
 .vscode/
 
 inventory.env
+
+# Flyway ignores
+*.user.toml
+*.artifact
+report.html
+report.json

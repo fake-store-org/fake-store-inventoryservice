@@ -31,6 +31,8 @@ public class Inventory {
   private UUID productId;
   @NotNull
   private Integer inStock;
+
+  @Builder.Default
   @ColumnDefault("0")
   private Integer reserved = 0;
 
